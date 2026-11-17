@@ -100,33 +100,44 @@ Prefer to do it by hand? Skip to **Create a Project** below.
 
 ## Skills: make your AI assistant fluent in Tina4
 
-Tina4 ships two AI **skills**: `tina4-developer` (backend) and `tina4-js` (frontend). They are the source of truth for the framework's patterns, so Claude (Code or Desktop) builds correctly instead of guessing.
+Tina4 ships twelve AI **skills**. For building apps: one developer skill per backend (`tina4-developer-python`, `-php`, `-ruby`, `-nodejs`), `tina4-js` for the reactive frontend, `tina4-architect` and `tina4-design` for starting a project, `tina4-a11y` and `tina4-seo` for accessibility and search audits, `tina4-test-plan` for test plans, and `tina4-cli` for the `tina4` client itself. For maintaining Tina4: `tina4-maintainer`. They are the source of truth for the framework's patterns, so your assistant builds correctly instead of guessing.
 
-`tina4 setup` installs them for you. To install them by hand on any machine:
+`tina4 setup` installs them for you. To install them by hand, name the tool they are for:
 
 ```bash
-curl -fsSL https://tina4.com/install-skills.sh | sh   # macOS / Linux
-irm https://tina4.com/install-skills.ps1 | iex        # Windows PowerShell
+curl -fsSL https://tina4.com/install-skills.sh | TINA4_SKILLS_TARGET=claude sh   # macOS / Linux
+$env:TINA4_SKILLS_TARGET = "claude"; irm https://tina4.com/install-skills.ps1 | iex   # Windows PowerShell
 ```
 
-They install into `~/.claude/skills/tina4-developer` and `~/.claude/skills/tina4-js`, where Claude Code and Claude Desktop load them automatically.
+The target decides where they land:
+
+| Target | Folder | Read by |
+|--------|--------|---------|
+| `claude` | `~/.claude/skills` | Claude Code and Claude Desktop |
+| `codex` | `~/.agents/skills` | Codex |
+| `deepseek` | `~/.agents/skills` | DeepSeek Deep Code (the same folder as Codex) |
+| `cursor` | `~/.cursor/skills` | Cursor |
+| `hermes` | `~/.hermes/skills` | Hermes Agent |
+| `all` | all four folders | every tool above |
+
+The installer stops with an error if no target is set.
 
 ### Updating your skills
 
-The skills grow with the framework. Each release refines the patterns, and your local copies stay frozen at whatever version you installed. To pull the current ones, run the same command again:
+The skills grow with the framework. Each release refines the patterns, and your local copies stay frozen at whatever version you installed. To pull the current ones, run the same command again, with the same target:
 
 ```bash
-curl -fsSL https://tina4.com/install-skills.sh | sh   # macOS / Linux
-irm https://tina4.com/install-skills.ps1 | iex        # Windows PowerShell
+curl -fsSL https://tina4.com/install-skills.sh | TINA4_SKILLS_TARGET=claude sh   # macOS / Linux
+$env:TINA4_SKILLS_TARGET = "claude"; irm https://tina4.com/install-skills.ps1 | iex   # Windows PowerShell
 ```
 
-The installer overwrites each `SKILL.md` and its reference files in place, so an update never leaves a stale copy behind. There is nothing to uninstall first. After it finishes, restart Claude (Code or Desktop) so it reloads the files.
+The installer overwrites each `SKILL.md` and its reference files in place, so an update never leaves a stale copy behind. There is nothing to uninstall first. After it finishes, restart your coding tool so it reloads the files.
 
-The installer tracks the latest release, so a re-run gives you exactly what shipped with the current version. To pin a machine to a specific version instead, pass a release tag through `TINA4_SKILLS_REF`:
+Each installer is pinned to the release it shipped with, so a re-run gives you exactly what shipped with the current version. To pin a machine to a specific version instead, pass a release tag through `TINA4_SKILLS_REF`:
 
 ```bash
-curl -fsSL https://tina4.com/install-skills.sh | TINA4_SKILLS_REF=3.13.51 sh   # macOS / Linux
-$env:TINA4_SKILLS_REF="3.13.51"; irm https://tina4.com/install-skills.ps1 | iex  # Windows PowerShell
+curl -fsSL https://tina4.com/install-skills.sh | TINA4_SKILLS_TARGET=claude TINA4_SKILLS_REF=3.13.164 sh   # macOS / Linux
+$env:TINA4_SKILLS_TARGET = "claude"; $env:TINA4_SKILLS_REF = "3.13.164"; irm https://tina4.com/install-skills.ps1 | iex   # Windows PowerShell
 ```
 
 ### Found a skill that lies?

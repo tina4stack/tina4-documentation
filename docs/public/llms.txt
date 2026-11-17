@@ -61,9 +61,9 @@ Preview without changing anything: `tina4 setup --dry-run`. Scaffold without any
 
 The tina4 **skills** are the single highest-leverage thing for an AI building Tina4. They are the source of truth for the framework's patterns and stop the guessing that breaks builds. **Install them and use them.**
 
-- **What:** eleven skills. For building apps: one developer skill per backend (`tina4-developer-python` / `-php` / `-ruby` / `-nodejs`), `tina4-js` for the reactive frontend, `tina4-architect` and `tina4-design` for starting a new project, `tina4-a11y` and `tina4-seo` for accessibility and search audits, and `tina4-cli` for the `tina4` client itself (every command and flag). For maintaining Tina4 itself: `tina4-maintainer`.
+- **What:** twelve skills. For building apps: one developer skill per backend (`tina4-developer-python` / `-php` / `-ruby` / `-nodejs`), `tina4-js` for the reactive frontend, `tina4-architect` and `tina4-design` for starting a new project, `tina4-a11y` and `tina4-seo` for accessibility and search audits, `tina4-test-plan` for test plans, and `tina4-cli` for the `tina4` client itself (every command and flag). For maintaining Tina4 itself: `tina4-maintainer`.
 - **Install:** `tina4 setup` installs the selected tool's skills. To install or refresh them later, run `tina4 skills` and choose Claude, Codex, Cursor, or all three. `tina4 update` also refreshes each installed Tina4 skills target.
-- **Where they live:** Claude uses `~/.claude/skills`, Codex uses `~/.agents/skills`, and Cursor uses `~/.cursor/skills`.
+- **Where they live:** Claude uses `~/.claude/skills`, Codex and DeepSeek Deep Code use `~/.agents/skills`, Cursor uses `~/.cursor/skills`, and Hermes Agent uses `~/.hermes/skills`. The install scripts take `TINA4_SKILLS_TARGET=claude`, `codex`, `deepseek`, `cursor`, `hermes` or `all`.
 - **Use:** follow the matching developer skill for backend work, `tina4-js` for the frontend, `tina4-architect` / `tina4-design` when starting a new project, and `tina4-cli` for anything about the `tina4` command. Unsure of an API? Read the skill before guessing.
 
 **Scaffolding commands - let the CLI write the boilerplate.** Never hand-build the project layout or files; generate them:
@@ -177,7 +177,7 @@ For exact, version-correct signatures, use these in order - don't invent API nam
      -d '{"question":"How do I define a POST route with auth in Python?","language":"python"}'
    # -> {"query": "...", "answer": "...", "sources": [...]}
    ```
-3. **The installed skills.** `tina4 setup` and `tina4 skills` support Claude, Codex, and Cursor. The client installs the skills into that tool's user skills directory. Other tools can use the RAG and documentation above, then read the generated scaffold before changing code.
+3. **The installed skills.** `tina4 setup` and `tina4 skills` support Claude, Codex, and Cursor; the install scripts also cover Hermes Agent and DeepSeek Deep Code. Each installs the skills into that tool's user skills directory. Other tools can use the RAG and documentation above, then read the generated scaffold before changing code.
 4. **The docs:** https://tina4.com, or the markdown pages linked below.
 
 The essentials look like this in Python (the reference backend):
@@ -346,8 +346,8 @@ Other `tina4 deploy` targets generate the config and print the next commands: `s
 
 - [Skills in Get Started](https://tina4.com/get-started/index.md): what the skills do, and installing and updating them by hand
 - [CLI reference](https://tina4.com/general/cli.md): `tina4 skills` (Claude, Codex, Cursor or all) and `tina4 update`
-- [install-skills.sh](https://tina4.com/install-skills.sh): skills installer for macOS and Linux, `curl -fsSL https://tina4.com/install-skills.sh | sh`
-- [install-skills.ps1](https://tina4.com/install-skills.ps1): skills installer for Windows PowerShell, `irm https://tina4.com/install-skills.ps1 | iex`
+- [install-skills.sh](https://tina4.com/install-skills.sh): skills installer for macOS and Linux, `curl -fsSL https://tina4.com/install-skills.sh | TINA4_SKILLS_TARGET=claude sh`
+- [install-skills.ps1](https://tina4.com/install-skills.ps1): skills installer for Windows PowerShell, `$env:TINA4_SKILLS_TARGET = "claude"; irm https://tina4.com/install-skills.ps1 | iex`
 - [Latest skills version](https://tina4.com/skills/latest/version): the current skills release, as plain text
 - [Report a stale or incorrect skill](https://tina4.com/report-a-skill.md)
 
