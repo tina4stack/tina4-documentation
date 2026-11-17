@@ -350,7 +350,7 @@ The app-facing `Ai` client and the developer dashboard share the `TINA4_AI_*` na
 | `TINA4_SWAGGER_TITLE` | `Tina4 API` | OpenAPI spec title. Falls back to `PROJECT_NAME`. |
 | `TINA4_SWAGGER_DESCRIPTION` | `Auto-generated API documentation` | OpenAPI spec description. |
 | `TINA4_SWAGGER_VERSION` | _(Gem version)_ | Overrides the spec `version`. |
-| `TINA4_SWAGGER_ENABLED` | _(inherits `TINA4_DEBUG`)_ | Enables the Swagger UI and `/swagger.json` route. Defaults to `TINA4_DEBUG`; set explicitly to override. |
+| `TINA4_SWAGGER_ENABLED` | _(inherits `TINA4_DEBUG`)_ | Enables the Swagger UI and the `/swagger/openapi.json` route. Defaults to `TINA4_DEBUG`; set explicitly to override. |
 | `TINA4_SWAGGER_CONTACT_EMAIL` | _(empty)_ | Contact email rendered into the OpenAPI `info.contact` block. |
 | `TINA4_SWAGGER_LICENSE` | _(empty)_ | SPDX license name (e.g. `MIT`) rendered into the OpenAPI `info.license` block. |
 | `PROJECT_NAME` | _(none)_ | Alternative OpenAPI title source when `TINA4_SWAGGER_TITLE` is unset. |

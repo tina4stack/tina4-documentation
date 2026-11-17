@@ -348,7 +348,7 @@ The app-facing `Ai` client and the developer dashboard share the `TINA4_AI_*` na
 | `TINA4_SWAGGER_TITLE` | `Tina4 API` | OpenAPI spec title shown in the Swagger UI. |
 | `TINA4_SWAGGER_DESCRIPTION` | `Auto-generated from Tina4 routes` | OpenAPI spec description. |
 | `TINA4_SWAGGER_VERSION` | `1.0.0` | OpenAPI spec version. |
-| `TINA4_SWAGGER_ENABLED` | _(inherits `TINA4_DEBUG`)_ | Master switch for Swagger UI and the `/swagger`/`/swagger.json` routes. When unset, follows `TINA4_DEBUG` so Swagger is on in dev and off in prod automatically. Set explicitly to expose docs in production. |
+| `TINA4_SWAGGER_ENABLED` | _(inherits `TINA4_DEBUG`)_ | Master switch for Swagger UI and the `/swagger` and `/swagger/openapi.json` routes. When unset, follows `TINA4_DEBUG` so Swagger is on in dev and off in prod automatically. Set explicitly to expose docs in production. |
 | `TINA4_SWAGGER_CONTACT_EMAIL` | _(empty)_ | Contact email written into the generated OpenAPI `info.contact` block. |
 | `TINA4_SWAGGER_LICENSE` | _(empty)_ | License name written into the generated OpenAPI `info.license` block. |
 | `TINA4_SWAGGER_CONTACT_TEAM` | _(empty)_ | Contact name rendered in the OpenAPI spec's `info.contact.name` field. |
