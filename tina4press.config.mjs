@@ -215,7 +215,11 @@ export default {
   outDir: "docs/.vitepress/dist",
   // headHtml() reads config.head (VitePress format: [tag, attrs, innerHTML]).
   // Top level, NOT themeConfig - it is not a theme option.
-  head: [["style", { id: "tp-site-links" }, SITE_LINK_CSS], ...FONT_HEAD, ...CHAT_HEAD, ...OG_META],
+  // rel="describedby" points every page at /llms.txt (llmstxt.org). Each page's
+  // own rel="alternate" markdown link is per page, so scripts/gen-md-companions.mjs
+  // adds it after the build.
+  head: [["style", { id: "tp-site-links" }, SITE_LINK_CSS], ...FONT_HEAD, ...CHAT_HEAD, ...OG_META,
+    ["link", { rel: "describedby", href: "/llms.txt" }]],
   themeConfig: {
     analytics: "G-FZRRSBE9M0",
     // The header, matched to the home page (one collapse point, nav on one line).
