@@ -79,9 +79,10 @@ scripts/sign-installers-mac.sh                             # 3. re-sign install-
 scripts/gen-skills-bundle.sh 3.13.NNN                      # 4. stage docs/public/skills/3.13.NNN/
 ```
 
-Then set `docs/public/skills/latest/version` to the new ref, commit
-`docs/public/install-skills.{sh,ps1}` and `docs/public/skills/3.13.NNN/` in
-`tina4-documentation`, and push `main` - the deploy publishes it. `skills-list.sh`
+Then commit `docs/public/install-skills.{sh,ps1}` and `docs/public/skills/3.13.NNN/` in
+`tina4-documentation`, and push `main` - the deploy publishes it. The build sets
+`docs/public/skills/latest/version` to the newest bundle's ref on its own
+(`scripts/gen-skills-version-endpoints.py`, part of `docs:build`). `skills-list.sh`
 is the one list of which files make up a release, shared by the manifest and the
 bundle so the two can never disagree.
 
