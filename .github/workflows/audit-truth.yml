@@ -66,6 +66,12 @@ jobs:
         with:
           python-version: '3.12'
 
+      # docs/public/llms.txt must follow the llmstxt.org spec: H1, a summary
+      # blockquote, free-form markdown with no headings, then H2 sections that
+      # hold only `- [name](url): notes` links. Needs only this repo.
+      - name: Check llms.txt against the llmstxt.org spec
+        run: python3 scripts/check-llms-txt.py
+
       - name: Check inbound dependency licence policy
         run: |
           python3 scripts/check_dependency_licenses.py
