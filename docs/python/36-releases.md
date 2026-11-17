@@ -1,5 +1,25 @@
 # Release Notes
 
+## v3.13.164 (2026-11-17) - A template global reaches every page, and a free port stays quiet
+
+**A global you register reaches the page `render` produces.** Register a template global, filter or test on the class - `Frond.add_global` in Python, `\Tina4\Frond::addGlobal` in PHP, `Tina4.template_global` in Ruby, `Frond.addGlobal` in Node - and it now reaches every page the response renders, whether you register it before the first render or after. Before, the response engine took a copy once, so a later registration never arrived, and in Ruby and Node even the auto-wired `t()` rendered empty. `t()` also takes a params map now, `{{ t('welcome', {'name': n}) }}`, where Python and Ruby raised on it. A registration on one engine instance still stays on that engine (python#324, python#326, php#368, php#370, ruby#179, ruby#181, nodejs#204, nodejs#207; ADR-0106, ADR-0107).
+
+**`serve` says a port is in use only when something holds it.** With debug off, or with takeover opted out, every start printed "Port N is in use; takeover is disabled outside dev mode" for a port nothing held, so a production operator was told a free port was taken. The check now tries the bind first: a free port says nothing, and a held port is still refused with the same message (python#318, php#362, ruby#173, nodejs#198).
+
+**The PHP worker pool keeps its size.** `runWorkerPool()` replaced a worker for every child it reaped, including orphans re-parented to it - PID 1 in a container is everyone's parent - so a pool of 8 grew to 15 in a day. Only the pool's own workers are replaced now; other children are still reaped (php#360, closes php#358). A SIGTERM that lands while the accept loop builds its read set also exits 0 now, not 255 (php#364).
+
+**The dev dashboard reports the memory the process is using.** Each framework had its own way of getting it wrong: Python showed its peak as current, PHP showed its allocator heap (about 30 MB low), Node showed the V8 heap without Buffers, and Ruby sent no figure at all, so its dashboard said "Memory: ?". All four report current resident memory now, and PHP's `memory_source` says where its figure came from (python#320, php#363, ruby#175, nodejs#197).
+
+**An unreachable database says so.** A configured database that refused the connection was reported as "no database configured" (Python, Node) or "ORM not available" (Node), and Ruby logged "Database connected" after a failed connect. Each now says the configured database could not be reached, and Python and Node give the error (python#319, nodejs#199, ruby#172, ruby#174).
+
+**Security (Python).** The optional extras no longer admit releases with published advisories (`cryptography>=50.0.0`, `mysql-connector-python>=9.1.0`, `pymongo>=4.18.3`; the locked versions were never affected), and dnspython moves to 2.9.2 for GHSA-vvf4-9x63-8xvv. A new dependency-audit workflow checks every `uv.lock` pin against the advisory database; it found the dnspython advisory on its first run (python#314, python#317).
+
+**AI skills.** The skills were audited against the code, and more than 70 contradictions were fixed. Every app-building skill now forbids patching the framework to get past a bug; the agent reports it instead. `tina4-maintainer` loads a short floor and pulls in its references on demand. `tina4-test-plan` joins the installers, and both install scripts now target Hermes Agent and DeepSeek Deep Code as well as Claude, Codex and Cursor. Each repo's `llms.txt` follows the llmstxt.org specification, with a CI check that keeps it that way.
+
+**Known issue (Node.js).** On a host where starting `node` takes more than a second - arm64 under emulation, a small board, a CPU-throttled container - `tina4nodejs serve` can report a free port as in use and refuse to start outside dev mode. The check that decides this spawns a short-lived `node` process and treats a timeout as "in use". The 3.13.163 release has the same fault. The fix, which treats only a real "address in use" as held, ships in the next release.
+
+Every fix is held down by a real, no-mock test.
+
 ## v3.13.163 (2026-11-13) - The consumer reads past a tombstone, and an async test answers for itself
 
 **A Kafka tombstone no longer stops the consumer short.** 3.13.162 stopped a tombstone crashing the Python and Ruby consumers, but it still answered one with "nothing", and that cost every framework the records behind it. A single-pass drain read the tombstone as an empty queue and went home, and the built-in clients in PHP, Node and Python never got past it at all - every pop re-read the same offset, with no error to say why. The consumer now steps over a tombstone and keeps reading, still bounded by its one-second deadline, and it stops rather than spins if the offset won't move. Acknowledging the next real record commits past the tombstones it skipped, so a restart walks straight past them too (python#309, php#357, ruby#169, nodejs#194).
