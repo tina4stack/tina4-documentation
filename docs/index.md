@@ -65,7 +65,7 @@ A lightweight, read-only desktop reviewer that understands your Tina4 layout, le
 
 ## Current framework release: 3.13.165
 
-Python, PHP, Ruby and Node.js are aligned on 3.13.165. `tina4nodejs serve` no longer refuses a
+Python, PHP, Ruby and Node.js are aligned on 3.13.165. The Node.js server no longer refuses a
 free port on a slow host, the known issue in 3.13.164. A run of the test suite on Windows found
 framework bugs that Linux could not see, and each one is fixed in every framework that had it:
 broken-import markers reach `/health`, database session handlers release their own connection,
@@ -101,7 +101,7 @@ No signup, no plugin. [llms.txt](/llms.txt) is a bootstrap protocol written for 
 
 ## What's new
 
-**v3.13.165 (2026-11-22)** - `tina4nodejs serve` keeps a free port on a slow host. Windows fixes across all four frameworks: broken-import markers reach `/health`, session handlers release their own database connection, and Node loads from any path and starts `npm`, `npx` and `tina4.cmd` safely. `migrate:create` (Python) and the `generate migration` hints (Ruby) name things correctly, and the developer skills report when they are stale. [full notes](/python/36-releases.md)
+**v3.13.165 (2026-11-22)** - The Node.js server keeps a free port on a slow host. Windows fixes across all four frameworks: broken-import markers reach `/health`, session handlers release their own database connection, and Node loads from any path and starts `npm`, `npx` and `tina4.cmd` safely. `migrate:create` (Python) and the `generate migration` hints (Ruby) name things correctly, and the developer skills report when they are stale. [full notes](/python/36-releases.md)
 
 **v3.13.164 (2026-11-17)** - Template globals, filters and tests registered on the class reach every rendered page in all four frameworks, and `t()` takes a params map. `serve` stays quiet about a free port, the PHP worker pool keeps its size, the dev dashboard reports real memory, and an unreachable database says so. Python tightens its optional-extra floors and patches dnspython. The skills install for Hermes and DeepSeek. [full notes](/python/36-releases.md)
 
