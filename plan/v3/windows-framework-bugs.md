@@ -78,8 +78,10 @@ or corrected that reading (Python's bug 2 is live, not latent; PHP has bug 7).
 - [ ] Python's suite is not Windows-portable: most of its 120 failures + 84
       errors on Windows come from `preexec_fn`, which Windows does not support
       (the same class of work as tina4-nodejs#210). Pre-existing on v3; separate task.
-- [ ] seedDir error handling differs: Python and Node swallow a failing seed file,
-      PHP lets it throw. Needs an owner decision on which contract wins; not changed here.
+- [x] seedDir error handling differs: Python and Node swallow a failing seed file,
+      Ruby logs it and `tina4ruby seed` exits 0, PHP throws. Decided in ADR-0108
+      (tina4-documentation#220): fail loud, stop at the first failing file, CLI
+      exits 1. Implementation is owed in all four as its own task.
 
 ## Commits
 
